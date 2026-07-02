@@ -22,6 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from lab_utils.governance import get_guard
+from .utils import count_words as _count_words
 
 GOVERNANCE_ACTOR_ID = os.getenv("GOVERNANCE_ACTOR_ID", "orchestrator")
 GOVERNANCE_TRACE_ID = os.getenv("GOVERNANCE_TRACE_ID")
@@ -98,6 +99,17 @@ async def list_tools() -> list[Tool]:
                 "required": ["text"],
             },
         ),
+        Tool(
+            name="count_words",
+            description="Đếm số từ trong một chuỗi văn bản và trả về một số nguyên.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string", "description": "Văn bản để đếm từ"},
+                },
+                "required": ["text"],
+            },
+        ),
     ]
     return [tool for tool in all_tools if tool.name in allowed]
 
@@ -120,6 +132,9 @@ def _sql_query(sql: str) -> list[dict[str, Any]]:
 def _summarize_text(text: str, max_bullets: int = 3) -> list[str]:
     sentences = [s.strip() for s in text.replace("\n", " ").split(".") if s.strip()]
     return [f"- {sentence}" for sentence in sentences[:max_bullets]]
+
+
+# `count_words` implementation is provided in mcp_server.utils for easier testing/import
 
 
 @app.call_tool()
@@ -163,6 +178,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             int(arguments.get("max_bullets", 3)),
         )
         return [TextContent(type="text", text="\n".join(bullets))]
+    if name == "count_words":
+        count = _count_words(arguments["text"])
+        return [TextContent(type="text", text=json.dumps({"count": count}, ensure_ascii=False))]
     raise ValueError(f"Tool không xác định: {name}")
 
 
